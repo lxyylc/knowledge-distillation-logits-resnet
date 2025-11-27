@@ -4,15 +4,18 @@ import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
 import os
-from model.resnet import *
+#resnet56
+#from nodel.resnet import *
+from model.resnet110 import *
 import torch.optim as optim
 
 # 参数配置
-parser = argparse.ArgumentParser(description='PyTorch Cifar10 ResNet56 Training Without Pruning')
+parser = argparse.ArgumentParser(description='PyTorch Cifar10 ResNet101 Training Without Pruning')
 parser.add_argument('--save_dir', help='Folder to save checkpoints and log.')
 BATCH_SIZE=256
 LR=0.1
 EPOCHS=200
+
 
 args = parser.parse_args()
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -44,7 +47,8 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 criterion = nn.CrossEntropyLoss()
-model = ResNet56().to(device)
+#model=ResNet56().to(device)
+model = ResNet110().to(device)
 optimizer = optim.SGD(model.parameters(), lr=LR, momentum=0.9, weight_decay=5e-4)
 scheduler = optim.lr_scheduler.MultiStepLR(
     optimizer,
@@ -59,7 +63,7 @@ def main():
     init_path=os.path.join(args.save_dir,f'init.pth')
     torch.save(model.state_dict(), init_path)
     best_accuracy = 0  # 2 初始化best test accuracy
-    print("start traing resnet56 on cifar10, total epochs=",EPOCHS)
+    print("start traing resnet101 on cifar10, total epochs=",EPOCHS)
     for epoch in range(EPOCHS):
         running_loss = 0.0
         correct = 0

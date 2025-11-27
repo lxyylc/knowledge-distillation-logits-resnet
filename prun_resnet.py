@@ -4,7 +4,8 @@ import torch
 import torch.nn as nn
 import torchvision
 import torchvision.transforms as transforms
-from model.resnet import *
+#from model.resnet import *
+from model.resnet110 import *
 from copy import deepcopy
 import torch.optim as optim
 
@@ -24,13 +25,15 @@ else:
     print("warning: using cpu")
 
 BATCH_SIZE=256
-PRUN_RATIO=0.2
+PRUN_RATIO=0.5
 pretrain_pth=os.path.join(args.pretrain_path, f'model_best.pth')
 init_pth=os.path.join(args.pretrain_path,f'init.pth')
+pruned_pth=os.path.join(args.save_dir,f'pruned.pth')
 retrained_pth=os.path.join(args.save_dir,f'retrained.pth')
-original_model = ResNet56().to(device)
+#original_model = ResNet56().to(device)
+original_model = ResNet110().to(device)
 original_model.load_state_dict(torch.load(pretrain_pth))
-pruned_model = ResNet56().to(device)
+pruned_model = ResNet110().to(device)
 pruned_model.load_state_dict(torch.load(init_pth))
 
 # 计算剪枝前参数数量
@@ -67,6 +70,7 @@ for data in testloader:
     total += labels.size(0)
     correct += (predicted == labels).sum()
 print("before pruning, test accuracy is %.3f"% (100 * correct / total))
+
 
 #l1-norm剪枝，结构化剪枝
 in_channel=3
@@ -122,6 +126,7 @@ for m in pruned_model.modules():
         m.num_features = len(bn_keep_indices)
 
 
+
 pruned_model.eval()
 total=0
 correct=0
@@ -135,7 +140,9 @@ for data in testloader:
 print("after pruning, test accuracy is %.3f"% (100 * correct / total))
 after_params = count_parameters(pruned_model)
 print(f"剪枝后参数数量: {after_params:,}")
-#torch.save(pruned_model.state_dict(), pruned_pth)
+#剪枝后微调前的模型
+torch.save(pruned_model, pruned_pth)
+
 
 print("finetuning after pruning")
 
@@ -186,7 +193,9 @@ for epoch in range(EPOCHS):
     # 仅在当前测试准确率高于最佳准确率时保存模型
     if test_acc > best_accuracy:
         best_accuracy = test_acc
-        torch.save(pruned_model.state_dict(), retrained_pth)
+        #torch.save(pruned_model.state_dict(), retrained_pth)
+        #改成同时保存权重和模型结构，方便后续复用
+        torch.save(pruned_model, retrained_pth)
 
     scheduler.step()
     pruned_model.train()
