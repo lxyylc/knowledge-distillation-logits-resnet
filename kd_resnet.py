@@ -24,18 +24,17 @@ teacher_pth = os.path.join(args.pretrain_path, f'model_best.pth')
 student_pth = os.path.join(args.pretrain_path, f'pruned.pth')
 retrained_pth = os.path.join(args.save_dir, f'retrained.pth')
 
-# 教师模型：实例化+加载预训练参数+固定权重
+# 教师模型加载预训练的权重
 teacher_model = ResNet110().to(device)
 teacher_model.load_state_dict(torch.load(teacher_pth, map_location=device, weights_only=False))
 teacher_model.eval()
 for param in teacher_model.parameters():
     param.requires_grad = False
 
-# 学生模型：加载剪枝后的完整模型
+# 学生模型直接加载结构+权重
 student_model = torch.load(student_pth, map_location=device, weights_only=False)
 student_model = student_model.to(device)
 
-# 数据预处理与加载
 train_transform = transforms.Compose([
     transforms.RandomCrop(32, padding=4),
     transforms.RandomHorizontalFlip(),
@@ -53,8 +52,6 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=BATCH_SIZE, shuff
 testset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=test_transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=BATCH_SIZE, shuffle=False)
 
-
-# 准确率评估函数
 def evaluate_accuracy(model, dataloader, device):
     correct = 0
     total = 0
@@ -82,10 +79,9 @@ scheduler = optim.lr_scheduler.MultiStepLR(
 )
 
 print("start training with knowledge distillation")
-best_test_acc = 0.0  # 记录最佳测试集准确率
+best_test_acc = 0.0
 
 for epoch in range(EPOCHS):
-    # 训练阶段
     student_model.train()
     running_loss = 0.0
     train_correct = 0
@@ -98,13 +94,13 @@ for epoch in range(EPOCHS):
             teacher_logits = teacher_model(images)
         # 学生模型更新参数
         student_logits = student_model(images)
-        # KL散度损失（软标签）
+        # KL散度损失
         teacher_soft = F.softmax(teacher_logits / T, dim=1)
         student_soft = F.log_softmax(student_logits / T, dim=1)
         kl_loss = F.kl_div(student_soft, teacher_soft, reduction='batchmean') * (T ** 2)
-        # 硬标签损失
+        # 交叉熵损失
         hard_loss = F.cross_entropy(student_logits, labels)
-        # 总损失:学生模型和教师模型的kl散度+学生模型和真实标签的交叉熵损失
+        # 总损失=学生模型和教师模型的kl散度+学生模型和真实标签的交叉熵损失
         total_loss = alpha * kl_loss + (1 - alpha) * hard_loss
         optimizer.zero_grad()
         total_loss.backward()
