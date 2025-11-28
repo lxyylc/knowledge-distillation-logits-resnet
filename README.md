@@ -7,13 +7,19 @@ student model: pruned resnet110
 $\text{total loss} = \alpha \cdot \text{KL loss} + (1 - \alpha) \cdot \text{cross entropy loss}$
 
 训练resnet110：
-```python train_resnet.py --save_dir logs```
+```
+python train_resnet.py --save_dir logs
+```
 
 剪枝resnet110：
-```python prun_resnet.py --pretrain_path logs --save_dir logs```
+```
+python prun_resnet.py --pretrain_path logs --save_dir logs
+```
 
 微调resnet110：
-``` python kd_resnet.py --pretrain_path logs --save_dir logs```
+```
+python kd_resnet.py --pretrain_path logs --save_dir logs
+```
 
 实验结果：
 |模型|知识蒸馏|剪枝比例|剪枝前acc|剪枝后acc|
